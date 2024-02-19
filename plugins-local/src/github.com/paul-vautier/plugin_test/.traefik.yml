@@ -1,0 +1,17 @@
+# The name of your plugin as displayed in the Plugins Catalog web UI.
+displayName: Energy Monitoring
+
+# For now, `middleware` is the only type available.
+type: middleware
+
+# The import path of your plugin.
+import: github.com/paul-vautier/plugin_test
+
+# A brief description of what your plugin is doing.
+summary: Modifies the parameters of the query depending on the available green energy and the requested energy usage
+
+# Configuration data for your plugin.
+# This is mandatory,
+# and Plugins Catalog will try to execute the plugin with the data you provide as part of its startup validity tests.
+testData:
+  Foo: Bar

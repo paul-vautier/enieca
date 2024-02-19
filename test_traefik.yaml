@@ -1,0 +1,12 @@
+experimental:
+  localPlugins:
+    energyMonitor:
+      moduleName: github.com/paul-vautier/plugin_test
+
+entryPoints: 
+  web: 
+    address: ":8000"
+
+providers:
+  file:
+    filename: rules.yaml
