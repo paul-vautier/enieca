@@ -1,6 +1,9 @@
 package plugin_test
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 const (
 	CONF_LOW = iota 
@@ -29,7 +32,7 @@ type RequestConfigurations struct {
 	min_joules_req    []float64
 	mean_joules_req   []float64
 	median_joules_req []float64
-	parameters        []map[string]ParametersValues
+	parameters        []ParametersValues
 }
 
 func (s *Scheduler) GetNextConfiguration(
@@ -38,19 +41,24 @@ func (s *Scheduler) GetNextConfiguration(
 	req_rate_perf int,
 	available_green float64 ,
 	load_type int,
-	duration_seconds int) [3]map[string]ParametersValues {
+	duration_seconds int) [3]ParametersValues {
 
+	
 	conf_min := argMin(s.configurations[load_type].qoe)
 	conf_max := argMax(s.configurations[load_type].qoe)
 
 	conf_perf := conf_max
 	conf_sust := conf_min
 	conf_bal := conf_min
+
 	if s.power(load_type, conf_sust, req_rate_sust) + s.power(load_type, conf_min, req_rate_bal) < available_green {
-		conf_bal = s.optimize(req_rate_bal, conf_sust, req_rate_sust, load_type, available_green)
-		conf_sust = s.optimize(req_rate_sust, conf_bal, req_rate_bal, load_type, available_green)
+
+		conf_bal = s.optimize(load_type,  req_rate_bal, conf_sust, req_rate_sust, available_green)
+		conf_sust = s.optimize(load_type, req_rate_sust, conf_bal, req_rate_bal, available_green)
+
 	}
-	return [3]map[string]ParametersValues{
+
+	return [3]ParametersValues{
 		s.configurations[load_type].parameters[conf_sust],
 		s.configurations[load_type].parameters[conf_bal],
 		s.configurations[load_type].parameters[conf_perf],
@@ -71,7 +79,6 @@ func (s *Scheduler) energy(load int, conf int, req_rate int, duration int) float
 func (s *Scheduler) optimize(load int, requests_rate int, conf_subtract int, requests_rate_subtract int, power_green float64) int {
 
 	var conf_candidates_indices []int 
-
 	for i := 0; i < len(s.configurations[load].qoe); i++ {
 		if s.power(load, i, requests_rate) <= (power_green - s.power(load, conf_subtract, requests_rate_subtract)) {
 			conf_candidates_indices = append(conf_candidates_indices, i)
