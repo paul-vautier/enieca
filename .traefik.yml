@@ -1,0 +1,55 @@
+# The name of your plugin as displayed in the Plugins Catalog web UI.
+displayName: Energy Monitoring
+
+# For now, `middleware` is the only type available.
+type: middleware
+
+# The import path of your plugin.
+import: github.com/paul-vautier/enieca
+
+# A brief description of what your plugin is doing.
+summary: Modifies the parameters of the query depending on the available green energy and the requested energy usage
+
+# Configuration data for your plugin.
+# This is mandatory,
+# and Plugins Catalog will try to execute the plugin with the data you provide as part of its startup validity tests.
+testData:
+  duration: 30
+    urlGreenEnergy: ""
+    endpoints:
+    - name: /whoami
+      redirect: /whoami/{:param1}
+      parameters:
+      - name: param1
+        type: path
+      - name: param2
+        type: query
+      benchmark:
+      - qoe: 2
+        meanRps: 5403.4
+        medianRps: 5178
+        minRps: 4723
+        maxRps: 6728
+        meanJoulesPerRequest: 0.009242
+        medianJoulesPerRequest: 0.00898
+        maxJoulesPerRequest: 0.01159
+        minJoulesPerRequest: 0.0076
+        parameters:
+        - name: param1
+          value: 5
+        - name: param2
+          value: 2
+      - qoe: 4
+        meanRps: 6173.4
+        medianRps: 6853
+        minRps: 5084
+        maxRps: 6909
+        meanJoulesPerRequest: 0.028756
+        medianJoulesPerRequest: 0.02996
+        maxJoulesPerRequest: 0.03213
+        minJoulesPerRequest: 0.02483
+        parameters:
+        - name: param1
+          value: 15
+        - name: param2
+          value: 2
