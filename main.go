@@ -131,16 +131,13 @@ func New(ctx context.Context, next http.Handler, config *EnergyMiddlewareConfig,
 	}
 	duration := config.Duration
 	power_green := 0
-	req_rate_sust := 250
-	req_rate_bal := 150
-	req_rate_perf := 120
 	params, redirections := endpointToRedirections(config.Endpoints)
 
 	middleware := &EnergyMiddleware{
 		next,
 		name,
 		new(sync.Mutex),
-		scheduler.GetNextConfiguration(req_rate_sust, req_rate_bal, req_rate_perf, float64(power_green), duration),
+		scheduler.GetNextConfiguration(0, 0, 0, float64(power_green), duration),
 		"",
 		params,
 		redirections,
