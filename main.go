@@ -258,8 +258,8 @@ func (e *EnergyMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		fmt.Fprintf(os.Stdout, "%+v\n", newReq.URL.Path)
 		newReq.RequestURI = newReq.URL.RequestURI()
 		newReq.Header.Add("X-energy-economy", fmt.Sprintf("%f", conf.savedEnergy))
-		e.mu.Unlock()
 	}
 
+	e.mu.Unlock()
 	e.next.ServeHTTP(rw, &newReq)
 }
