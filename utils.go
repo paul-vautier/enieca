@@ -1,4 +1,4 @@
-package plugin_test
+package enieca
 
 func argMin(slice []int, indices ...int) int {
 	if len(slice) == 0 {
