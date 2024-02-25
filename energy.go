@@ -1,10 +1,5 @@
 package enieca
 
-import (
-	"fmt"
-	"os"
-)
-
 const (
 	CONF_LOW = iota 
 	CONF_MEDIUM
@@ -43,7 +38,6 @@ func (s *Scheduler) GetNextConfiguration(
 			conf_sust = conf.optimize(req_rate_sust, conf_bal, req_rate_bal, available_green)
 
 		}
-		fmt.Fprintf(os.Stdout, "%+v\n", conf.median_joules_req) 
 		endpointsParam[endpoint] = [3]SelectedConfiguration{
 			{conf.parameters[conf_sust], conf.median_joules_req[conf_perf] - conf.median_joules_req[conf_sust]},
 			{conf.parameters[conf_bal], conf.median_joules_req[conf_perf] - conf.median_joules_req[conf_bal]},
