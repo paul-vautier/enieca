@@ -163,11 +163,12 @@ func (e *EnergyMiddleware) runBackgroundTask(ctx context.Context, scheduler Sche
 			e.mu.Lock()
 			e.configurations = scheduler.GetNextConfiguration(int(e.req_sust.Swap(0)), int(e.req_bal.Swap(0)), int(e.req_perf.Swap(0)), power_green, duration)
 			e.mu.Unlock()
-			fmt.Fprintf(os.Stdout, "INFO : Expected power consumption in watts for %d next seconds : \n", duration)
+			fmt.Fprintf(os.Stdout, "[INFO] Expected power consumption in watts for the next %d seconds : \n", duration)
 			for k, v := range e.configurations {
-				fmt.Fprintf(os.Stdout, "INFO : [SUSTAINED] '%s' : %f (W)\n", k, v[0].expectedConsumption)
-				fmt.Fprintf(os.Stdout, "INFO : [BALANCED] '%s' : %f (W)\n", k, v[1].expectedConsumption)
-				fmt.Fprintf(os.Stdout, "INFO : [PERFORMANCE] '%s' : %f (W)\n", k, v[2].expectedConsumption)
+				fmt.Fprintf(os.Stdout, "[INFO] Endpoint %s\n", k) 
+				fmt.Fprintf(os.Stdout, "[INFO] Sustained %f (W)\n", v[0].expectedConsumption)
+				fmt.Fprintf(os.Stdout, "[INFO] Balanced %f (W)\n", v[1].expectedConsumption)
+				fmt.Fprintf(os.Stdout, "[INFO] Performance %f (W)\n", v[2].expectedConsumption)
 			}
 		}
 	}
@@ -213,7 +214,7 @@ func (e *EnergyMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		for _, param := range parameters {
 			paramVal, err := conf.parameters.FindByName(param.Name)
 			if err != nil {
-				fmt.Fprintf(os.Stdout, "ERROR : Could not find a parameter with name %s for request %s", param.Name, url.Path)
+				fmt.Fprintf(os.Stdout, "[ERROR] Could not find a parameter with name %s for request %s", param.Name, url.Path)
 				continue
 			}
 			switch param.Type {
