@@ -19,13 +19,13 @@ func (s *Scheduler) GetNextConfiguration(
 	req_rate_sust int,
 	req_rate_bal int,
 	req_rate_perf int,
-	available_green float64 ,
-	duration_seconds int) map[string][3]SelectedConfiguration{
+	available_green float64,
+	duration_seconds int) map[string][3]SelectedConfiguration {
 
 	endpointsParam := make(map[string][3]SelectedConfiguration) 
 
+	available_green = available_green / float64(len(s.configurations))
 	for endpoint, conf := range s.configurations {
-
 		conf_min := argMin(conf.qoe)
 		conf_max := argMax(conf.qoe)
 
@@ -36,15 +36,15 @@ func (s *Scheduler) GetNextConfiguration(
 		if conf.power(conf_sust, req_rate_sust) + conf.power(conf_min, req_rate_bal) < available_green {
 			conf_bal = conf.optimize(req_rate_bal, conf_sust, req_rate_sust, available_green)
 			conf_sust = conf.optimize(req_rate_sust, conf_bal, req_rate_bal, available_green)
-
 		}
+		
 		endpointsParam[endpoint] = [3]SelectedConfiguration{
-			{conf.parameters[conf_sust], conf.median_joules_req[conf_perf] - conf.median_joules_req[conf_sust]},
-			{conf.parameters[conf_bal], conf.median_joules_req[conf_perf] - conf.median_joules_req[conf_bal]},
-			{conf.parameters[conf_perf], conf.median_joules_req[conf_perf] - conf.median_joules_req[conf_perf]},
+			{conf.parameters[conf_sust], conf.median_joules_req[conf_perf] - conf.median_joules_req[conf_sust], conf.power(conf_sust, req_rate_sust)},
+			{conf.parameters[conf_bal], conf.median_joules_req[conf_perf] - conf.median_joules_req[conf_bal], conf.power(conf_bal, req_rate_bal)},
+			{conf.parameters[conf_perf], conf.median_joules_req[conf_perf] - conf.median_joules_req[conf_perf], conf.power(conf_perf, req_rate_perf)},
 		}
 	}
-	return endpointsParam
+	return endpointsParam 
 }
 
 // Calculates the  consumption of a specific configuration under a current load type

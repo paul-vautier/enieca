@@ -107,8 +107,9 @@ func CreateConfig() *EnergyMiddlewareConfig {
 }
 
 type SelectedConfiguration struct {
-	parameters  BenchmarkParameters
-	savedEnergy float64
+	parameters          BenchmarkParameters
+	savedEnergy         float64
+	expectedConsumption float64
 }
 type EnergyMiddleware struct {
 	next           http.Handler
@@ -162,6 +163,12 @@ func (e *EnergyMiddleware) runBackgroundTask(ctx context.Context, scheduler Sche
 			e.mu.Lock()
 			e.configurations = scheduler.GetNextConfiguration(int(e.req_sust.Swap(0)), int(e.req_bal.Swap(0)), int(e.req_perf.Swap(0)), power_green, duration)
 			e.mu.Unlock()
+			fmt.Fprintf(os.Stdout, "INFO : Expected power consumption in watts for %d next seconds : \n", duration)
+			for k, v := range e.configurations {
+				fmt.Fprintf(os.Stdout, "INFO : [SUSTAINED] '%s' : %f (W)\n", k, v[0].expectedConsumption)
+				fmt.Fprintf(os.Stdout, "INFO : [BALANCED] '%s' : %f (W)\n", k, v[1].expectedConsumption)
+				fmt.Fprintf(os.Stdout, "INFO : [PERFORMANCE] '%s' : %f (W)\n", k, v[2].expectedConsumption)
+			}
 		}
 	}
 }
@@ -173,7 +180,7 @@ func (e *EnergyMiddleware) findAvailableGreenEnergy() float64 {
 	return 0
 }
 
-func (e* EnergyMiddleware) registerRequestType(req http.Request) int {
+func (e *EnergyMiddleware) registerRequestType(req http.Request) int {
 	header_value := req.Header.Get("X-user-energy-objective")
 	switch header_value {
 	case "eco":
@@ -206,7 +213,7 @@ func (e *EnergyMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		for _, param := range parameters {
 			paramVal, err := conf.parameters.FindByName(param.Name)
 			if err != nil {
-				fmt.Fprintf(os.Stdout, "Could not find a parameter with name %s for request %s", param.Name, url.Path)
+				fmt.Fprintf(os.Stdout, "ERROR : Could not find a parameter with name %s for request %s", param.Name, url.Path)
 				continue
 			}
 			switch param.Type {
