@@ -114,7 +114,7 @@ type SelectedConfiguration struct {
 type EnergyMiddleware struct {
 	next           http.Handler
 	name           string
-	mu             *sync.Mutex
+	mu             *sync.RWMutex
 	configurations map[string][3]SelectedConfiguration
 	urlGreenEnergy string
 	parametersType map[string]TypeParameters
@@ -137,7 +137,7 @@ func New(ctx context.Context, next http.Handler, config *EnergyMiddlewareConfig,
 	middleware := &EnergyMiddleware{
 		next,
 		name,
-		new(sync.Mutex),
+		new(sync.RWMutex),
 		scheduler.GetNextConfiguration(0, 0, 0, float64(power_green), duration),
 		"",
 		params,
@@ -200,7 +200,7 @@ func (e *EnergyMiddleware) registerRequestType(req http.Request) int {
 
 func (e *EnergyMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
-	e.mu.Lock()
+	e.mu.RLock()
 	newReq := *req
 	endpoint := newReq.URL.Path
 	confForEndpoint, exists := e.configurations[endpoint]
@@ -234,6 +234,6 @@ func (e *EnergyMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		newReq.Header.Add("X-energy-economy", fmt.Sprintf("%f", conf.savedEnergy))
 	}
 
-	e.mu.Unlock()
+	e.mu.RUnlock()
 	e.next.ServeHTTP(rw, &newReq)
 }
