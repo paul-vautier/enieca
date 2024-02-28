@@ -2,7 +2,9 @@ package enieca
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -35,10 +37,10 @@ func (p TypeParameters) FindByName(name string) (string, error) {
 
 // EnergyMiddlewareConfig the plugin configuration.
 type EnergyMiddlewareConfig struct {
-	UrlGreenEnergy string     `yaml:"url_green_energy"`
-	DefaultGreenEnergy float64 `yaml:"default_green_energy:`
-	Duration       int        `yaml:"duration"`
-	Endpoints      []Endpoint `yaml:"endpoints"`
+	UrlGreenEnergy     string     `yaml:"url_green_energy"`
+	DefaultGreenEnergy float64    `yaml:"default_green_energy"`
+	Duration           int        `yaml:"duration"`
+	Endpoints          []Endpoint `yaml:"endpoints"`
 }
 
 type Endpoint struct {
@@ -113,17 +115,17 @@ type SelectedConfiguration struct {
 	expectedConsumption float64
 }
 type EnergyMiddleware struct {
-	next           http.Handler
-	name           string
-	mu             *sync.RWMutex
-	configurations map[string][3]SelectedConfiguration
-	urlGreenEnergy string
+	next               http.Handler
+	name               string
+	mu                 *sync.RWMutex
+	configurations     map[string][3]SelectedConfiguration
+	urlGreenEnergy     string
 	defaultGreenEnergy float64
-	parametersType map[string]TypeParameters
-	redirections   map[string]string
-	req_sust       atomic.Uint32
-	req_bal        atomic.Uint32
-	req_perf       atomic.Uint32
+	parametersType     map[string]TypeParameters
+	redirections       map[string]string
+	req_sust           atomic.Uint32
+	req_bal            atomic.Uint32
+	req_perf           atomic.Uint32
 }
 
 // New created a new plugin.
@@ -141,7 +143,7 @@ func New(ctx context.Context, next http.Handler, config *EnergyMiddlewareConfig,
 		name,
 		new(sync.RWMutex),
 		scheduler.GetNextConfiguration(0, 0, 0, float64(power_green)),
-		"",
+		config.UrlGreenEnergy,
 		config.DefaultGreenEnergy,
 		params,
 		redirections,
@@ -164,11 +166,11 @@ func (e *EnergyMiddleware) runBackgroundTask(ctx context.Context, scheduler Sche
 		case <-ticker.C:
 			power_green := e.findAvailableGreenEnergy()
 			e.mu.Lock()
-			e.configurations = scheduler.GetNextConfiguration(int(e.req_sust.Swap(0)), int(e.req_bal.Swap(0)), int(e.req_perf.Swap(0)), power_green)
+			e.configurations = scheduler.GetNextConfiguration(int(e.req_sust.Swap(0)), int(e.req_bal.Swap(0)), int(e.req_perf.Swap(0)), power_green * float64(duration))
 			e.mu.Unlock()
 			fmt.Fprintf(os.Stdout, "[INFO] Expected power consumption in watts for the next %d seconds : \n", duration)
 			for k, v := range e.configurations {
-				fmt.Fprintf(os.Stdout, "[INFO] Endpoint %s\n", k) 
+				fmt.Fprintf(os.Stdout, "[INFO] Endpoint %s\n", k)
 				fmt.Fprintf(os.Stdout, "[INFO] Sustained %f (W)\n", v[0].expectedConsumption)
 				fmt.Fprintf(os.Stdout, "[INFO] Balanced %f (W)\n", v[1].expectedConsumption)
 				fmt.Fprintf(os.Stdout, "[INFO] Performance %f (W)\n", v[2].expectedConsumption)
@@ -179,7 +181,47 @@ func (e *EnergyMiddleware) runBackgroundTask(ctx context.Context, scheduler Sche
 
 func (e *EnergyMiddleware) findAvailableGreenEnergy() float64 {
 	if e.urlGreenEnergy != "" {
+		resp, err := http.Get(e.urlGreenEnergy)
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "[ERROR] Request to %s failed\n", e.urlGreenEnergy)
+			return e.defaultGreenEnergy
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			fmt.Fprintf(os.Stdout, "[ERROR] Request to %s returned a non-2xx status code\n", e.urlGreenEnergy)
+			return e.defaultGreenEnergy
+		}
 
+		// Unmarshal the JSON
+		body, err := io.ReadAll(resp.Body)
+		// Define a struct to match the JSON structure
+		// Assuming `data` is now of type map[string]interface{}
+		var data map[string]interface{}
+
+		// Unmarshal the JSON
+		err = json.Unmarshal(body, &data)
+		if err != nil {
+		    fmt.Fprintf(os.Stdout, "Error unmarshalling body %s : %s\n", string(body), err)
+		    return e.defaultGreenEnergy
+		}
+
+		// Access the desired value
+		results, ok := data["results"].([]interface{})
+		if ok && len(results) > 0 {
+		    series, ok := results[0].(map[string]interface{})["series"].([]interface{})
+		    if ok && len(series) > 0 {
+			values, ok := series[0].(map[string]interface{})["values"].([]interface{})
+			if ok && len(values) > 0 {
+			    if len(values[0].([]interface{})) >= 2 {
+				value, ok := values[0].([]interface{})[1].(float64)
+				if ok {
+				    fmt.Fprintf(os.Stdout, "[INFO] The available green energy is %f\n", value)
+				    return value
+				}
+			    }
+			}
+		    }
+		}
+		fmt.Fprintf(os.Stdout, "[ERROR] invalid json body for %s\n", e.urlGreenEnergy)
 	}
 	return e.defaultGreenEnergy
 }
@@ -217,7 +259,7 @@ func (e *EnergyMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		for _, param := range parameters {
 			paramVal, err := conf.parameters.FindByName(param.Name)
 			if err != nil {
-				fmt.Fprintf(os.Stdout, "[ERROR] Could not find a parameter with name %s for request %s", param.Name, url.Path)
+				fmt.Fprintf(os.Stdout, "[ERROR] Could not find a parameter with name %s for request %s\n", param.Name, url.Path)
 				continue
 			}
 			switch param.Type {
@@ -239,4 +281,5 @@ func (e *EnergyMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 
 	e.mu.RUnlock()
 	e.next.ServeHTTP(rw, &newReq)
+
 }
