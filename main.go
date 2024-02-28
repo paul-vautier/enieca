@@ -36,6 +36,7 @@ func (p TypeParameters) FindByName(name string) (string, error) {
 // EnergyMiddlewareConfig the plugin configuration.
 type EnergyMiddlewareConfig struct {
 	UrlGreenEnergy string     `yaml:"url_green_energy"`
+	DefaultGreenEnergy float64 `yaml:"default_green_energy:`
 	Duration       int        `yaml:"duration"`
 	Endpoints      []Endpoint `yaml:"endpoints"`
 }
@@ -117,6 +118,7 @@ type EnergyMiddleware struct {
 	mu             *sync.RWMutex
 	configurations map[string][3]SelectedConfiguration
 	urlGreenEnergy string
+	defaultGreenEnergy float64
 	parametersType map[string]TypeParameters
 	redirections   map[string]string
 	req_sust       atomic.Uint32
@@ -138,8 +140,9 @@ func New(ctx context.Context, next http.Handler, config *EnergyMiddlewareConfig,
 		next,
 		name,
 		new(sync.RWMutex),
-		scheduler.GetNextConfiguration(0, 0, 0, float64(power_green), duration),
+		scheduler.GetNextConfiguration(0, 0, 0, float64(power_green)),
 		"",
+		config.DefaultGreenEnergy,
 		params,
 		redirections,
 		atomic.Uint32{},
@@ -161,7 +164,7 @@ func (e *EnergyMiddleware) runBackgroundTask(ctx context.Context, scheduler Sche
 		case <-ticker.C:
 			power_green := e.findAvailableGreenEnergy()
 			e.mu.Lock()
-			e.configurations = scheduler.GetNextConfiguration(int(e.req_sust.Swap(0)), int(e.req_bal.Swap(0)), int(e.req_perf.Swap(0)), power_green, duration)
+			e.configurations = scheduler.GetNextConfiguration(int(e.req_sust.Swap(0)), int(e.req_bal.Swap(0)), int(e.req_perf.Swap(0)), power_green)
 			e.mu.Unlock()
 			fmt.Fprintf(os.Stdout, "[INFO] Expected power consumption in watts for the next %d seconds : \n", duration)
 			for k, v := range e.configurations {
@@ -178,7 +181,7 @@ func (e *EnergyMiddleware) findAvailableGreenEnergy() float64 {
 	if e.urlGreenEnergy != "" {
 
 	}
-	return 0
+	return e.defaultGreenEnergy
 }
 
 func (e *EnergyMiddleware) registerRequestType(req http.Request) int {

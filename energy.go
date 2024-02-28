@@ -20,7 +20,7 @@ func (s *Scheduler) GetNextConfiguration(
 	req_rate_bal int,
 	req_rate_perf int,
 	available_green float64,
-	duration_seconds int) map[string][3]SelectedConfiguration {
+	) map[string][3]SelectedConfiguration {
 
 	endpointsParam := make(map[string][3]SelectedConfiguration) 
 
