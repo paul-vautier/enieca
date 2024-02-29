@@ -276,8 +276,8 @@ func (e *EnergyMiddleware) ServeHTTP(rw http.ResponseWriter, req *http.Request) 
 		}
 		newReq.URL.Path = redirectUrl
 		newReq.RequestURI = newReq.URL.RequestURI()
-		newReq.Header.Add("X-energy-economy", fmt.Sprintf("%f", conf.savedEnergy))
-	}
+		rw.Header().Add("X-energy-economy", fmt.Sprintf("%f", conf.savedEnergy))
+	} 
 
 	e.mu.RUnlock()
 	e.next.ServeHTTP(rw, &newReq)

@@ -16,6 +16,7 @@ summary: Modifies the parameters of the query depending on the available green e
 testData:
   duration: 30
   urlGreenEnergy: ""
+  defaultGreenEnergy: 0.5
   endpoints:
   - name: /whoami
     redirect: /whoami/{:param1}
